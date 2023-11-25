@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <title>ShuffleApp</title>
+
+        <!--
+        <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script> -->
+        <!-- PrimeReact -->
+        <link rel="stylesheet" href="https://unpkg.com/primeicons/primeicons.css" />
+        <link rel="stylesheet" href="https://unpkg.com/primereact/resources/themes/lara-light-indigo/theme.css" />
+        <link rel="stylesheet" href="https://unpkg.com/primereact/resources/primereact.min.css" />
+        <link rel="stylesheet" href="https://unpkg.com/primeflex@3.2.1/primeflex.min.css" />
+        <!-- <script src="https://unpkg.com/react-transition-group@4.4.2/dist/react-transition-group.js"></script> -->
+        <!-- Demo
+        <script src="https://unpkg.com/primereact/core/core.min.js"></script>
+        <script src="https://unpkg.com/primereact/skeleton/skeleton.min.js"></script> -->
+
+        <script src="https://unpkg.com/react@latest/umd/react.development.js" crossorigin="anonymous"></script>
+        <script src="https://unpkg.com/react-dom@latest/umd/react-dom.development.js"></script>
+        <script src="https://unpkg.com/@mui/material@latest/umd/material-ui.development.js" crossorigin="anonymous"></script>
+        <script src="https://unpkg.com/@babel/standalone@latest/babel.min.js" crossorigin="anonymous"></script>
+        <!-- Fonts to support Material Design -->
+        <link rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap"
+        />
+        <!-- Icons to support Material Design -->
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+
+        <!-- SheetJS CDN -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.14.3/xlsx.full.min.js"></script>
+        <!-- FileSaver saveAs CDN -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
+
+        <style>
+            .mg15 {
+                margin: 15px 0;
+            }
+            .mg30 {
+                margin: 30px 0;
+            }
+            .mg45 {
+                margin: 30px 0;
+            }
+            .wdh80 {
+                width:'80px'
+            }
+            .wdh100 {
+                width:'100px'
+            }
+            .wrapper {
+                /* @extend .mg15; */
+                margin: 20px 0;
+            }
+
+            .controlArea {
+                height: 125px;
+                padding: 10px 0 30px 0;
+                display: flex;
+                gap: 25px;
+            }
+            .btnArea {
+                padding: 3px;
+                display: flex;
+                gap: 3px;
+            }
+            .displayArea {
+            }
+            .executePanel {
+                padding: 25px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="root"></div>
+
+        <script type="text/babel">
+
+            const _groupHistory = [
+                ['JS,EJ,JY','SY,GB,SA'],
+                // ['JS,SA,EJ','SY,JY,GB'],
+            ];
+            const members = ['JS','EJ','JY','SY','GB','SA', 'P1','P2','P3','P4'];
+            const _per = 3;
+            const _accRate = 3; // 1.5;
+
+            const { useState, useEffect, useMemo, Fragment } = React;
+            // const { Dropdown } = primereact.dropdown;
+            // const { Skeleton } = primereact.skeleton;
+            const { Select, MenuItem, TextField, InputLabel, Input, Button } = MaterialUI;
+
+            const ShuffleApp = ({ // groupHistory, 
+                defPer, defAccRate 
+            }) => {
+                const [groupHistory, setGroupHistory] = useState();
+                const [per, setPer] = useState(defPer);
+                const [accRate, setAccRate] = useState(defAccRate);
+                const shfRate = useMemo(() => 50 * (groupHistory?.length || 1) * accRate, [accRate]);
+
+                const [exceptList, setExceptList] = useState();
+                const [addedExceptList, setAddedExceptList] = useState();
+                const [historyList, setHistoryList] = useState();
+
+                useEffect(() => {
+                    if (groupHistory) {
+                        // console.log('groupHistory:', groupHistory);
+                        const allCases = getAllCases(groupHistory);
+                        setExceptList([...allCases]);
+                    }
+                }, [groupHistory]);
+
+                useEffect(() => {
+                    if (exceptList) generateCase();
+                }, [exceptList]);
+
+                function getAllCases(history) {
+                    const allCases = [];
+                    const setCases = history?.map((aCase) => {
+                        aCase?.map((group) => {
+                            for (let step = 0; step < shfRate; step++) {
+                                const splited = group?.split(',');
+                                const shuffled = shuffle(splited, 1)?.spliced;
+                                const joined = shuffled?.join();
+                                // console.log('shuffled:', shuffled, joined)
+                                if (!allCases.includes(joined)) allCases.push(joined);
+                            }
+                        })
+                    })
+                    return allCases;
+                }
+
+                function shuffle(items, substractBy) {
+                    const validSub = isNaN(substractBy) ? 0 : substractBy;
+                    const shuffled = items.sort(() => Math.random() - 0.5);
+                    // console.log('shuffle:', validSub, items, items?.length - validSub)
+                    const spliced = structuredClone(shuffled);
+                    spliced.splice(items?.length - validSub);
+                    return {
+                        shuffled,
+                        spliced
+                    }
+                }
+
+                function generateCase() {
+                    for (let step = 0; step < shfRate * 1; step++) {
+                        const shuffler = shuffle(members);
+                        const setCase = [];
+                        const setGroup = [];
+                        shuffler?.shuffled?.map((member, idx) => {
+                            const mod = (idx + 1) % per;
+                            // console.log('setCase:', idx, per, mod)
+                            setGroup.push(member);
+                            if (mod === 0) {
+                                setCase.push(setGroup?.join());
+                                setGroup.length = 0;
+                            }
+                        })
+                        const pastExcepts = [...exceptList || [], ...addedExceptList || []];
+                        const newExcepts = [...getAllCases([setCase])];
+                        console.log('generateCase', // pastExcepts, newExcepts
+                        );
+                        let allJoined = '';
+                        const history = groupHistory || historyList || [];
+                        history?.map((aCase) => {
+                            // console.log('allJoined:', allJoined, aCase);
+                            allJoined += aCase?.join('||'); // shuffler?.shuffled?.join();
+                        })
+                        const exists = pastExcepts?.filter((except) => newExcepts.includes(except));
+                        // console.log('allCases:', setCase?.join('||'), pastExcepts, '...', newExcepts?.slice(0, 4), '...', exists);
+                        if (exists && exists.length > 0) {
+                            continue;
+                        } else {
+                            // console.log('setCase.res:', setCase);
+                            history.push(setCase);
+                            setHistoryList([...history]);
+                            console.log('AddExcepts:', pastExcepts, addedExceptList, // newExcepts
+                            );
+                            setAddedExceptList([...addedExceptList || [], ...newExcepts]);
+                            break;
+                        }
+                    }
+                }
+
+                useEffect(() => {
+                    readFile();
+                }, [])
+
+                function initData () {
+                    setAddedExceptList();
+                    setExceptList();
+                    setGroupHistory();
+                    setHistoryList([]);
+                }
+
+                const [dbData, setDbData] = useState('');
+                function readFile () {
+                    const reader = new FileReader();
+                    let excelFileData = null;
+
+                    const fileInput = document.getElementById('inputExcelRead');
+                    fileInput.addEventListener('click', (e) => {
+                        console.log('click:', e)
+                        e.target.value = null;
+                        initData();
+                    });
+                    fileInput.addEventListener('change', function() {
+                        // console.log('readFile:', event.target.files);
+                        reader.readAsArrayBuffer(event.target.files[0]);
+                    }, false);
+
+                    reader.onload = function (e) {
+                        const data = e.target.result;
+                        const workbook = XLSX.read(data, { type: "array" });
+
+
+                        const sheetName = workbook.SheetNames;
+                        const sheet = workbook.Sheets[sheetName];
+                        excelFileData = XLSX.utils.sheet_to_html(sheet);
+                        const onlyTrTds = excelFileData
+                            .replaceAll('<html><head><meta charset="utf-8"/><title>SheetJS Table Export</title></head><body><table>', '')
+                            .replaceAll('</table></body></html>', '');
+                        // console.log('fileReader:', sheet, onlyTrTds);
+                        setDbData(sheet);
+
+                        // const element = document.getElementById('displayDiv');
+                        // element.innerHTML = excelFileData;
+                    };
+                }
+
+                useEffect(() => {
+                    if (dbData) {
+                        const cells = Object.keys(dbData)?.map(function (key) {
+                            return dbData[key]?.v || dbData[key]?.h || dbData[key]?.w;
+                        });
+                        const _groupHistory = [];
+                        const _case = [];
+                        const _group = [];
+                        cells?.map((cell, idx, arr) => {
+                            const isLast = idx === arr.length - 1;
+                            if (cell === undefined) {}
+                            else {
+                                if (!(cell?.includes('회차') || cell?.includes('팀'))) {
+                                    _group.push(cell);
+                                }
+
+                                if (_group?.length > 0 && cell?.includes('팀')) {
+                                    _case.push(_group.join());
+                                    // console.log('_group:', _group);
+                                    _group.length = 0;
+                                }
+                                if (_group?.length > 0 && cell?.includes('회차')) {
+                                    _case.push(_group.join());
+                                    // console.log('_group:', _group);
+                                    _group.length = 0;
+
+                                    _groupHistory.push(structuredClone(_case));
+                                    // console.log('_case:', _case, _groupHistory);
+                                    _case.length = 0;
+                                }
+                                // console.log(`cell[${idx}]`, arr.length -1, '/', idx, isLast, _group)
+                                if (isLast) {
+                                    _case.push(_group.join());
+                                    _groupHistory.push(structuredClone(_case));
+                                }
+                            }
+                        })
+                        console.log('props:', cells, // dbData, _groupHistory
+                        ); // [['JS,EJ,JY','SY,GB,SA'], [...
+                        setGroupHistory([..._groupHistory]);
+                    }
+                }, [dbData])
+
+                function exportExcel () {
+                    function s2ab(s) { 
+                        var buf = new ArrayBuffer(s.length); 
+                        var view = new Uint8Array(buf); //create uint8array as viewer
+                        for (var i=0; i<s.length; i++) view[i] = s.charCodeAt(i) & 0xFF; //convert to octet
+                        return buf;    
+                    }
+                    var excelHandler = {
+                        getExcelFileName : function(){
+                            return 'table-test.xlsx';
+                        },
+                        getSheetName : function(){
+                            return 'Table Test Sheet';
+                        },
+                        getExcelData : function(){
+                            return document.getElementById('tableData'); 
+                        },
+                        getWorksheet : function(){
+                            return XLSX.utils.table_to_sheet(this.getExcelData());
+                        }
+                    }
+
+                    var wb = XLSX.utils.book_new();
+                    var newWorksheet = excelHandler.getWorksheet();
+                    XLSX.utils.book_append_sheet(wb, newWorksheet, excelHandler.getSheetName());
+                    var wbout = XLSX.write(wb, {bookType:'xlsx',  type: 'binary'});
+                    saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), excelHandler.getExcelFileName());
+                }
+
+                const parser = new DOMParser();
+                const wdh80 = {width: '80px'}
+                const wdh200 = {width: '200px'}
+                const hgt100pct = {height: '100%'}
+                const tableWrapStyle = {width: '88%', display: 'table', borderCollapse: 'collapse'};
+                const tableRowStyle = {display: 'table-row'};
+                const tableCellStyle = {padding: '5px', display: 'table-cell', borderBottom: '1px solid lightgray'};
+                return (<>
+                    <div className="controlArea">
+                        {true && 
+                            <div className="mg30">
+                                <Input style={wdh200} type="file" id="inputExcelRead" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>
+                            </div>}
+                        {true && 
+                            <div className="wrapper">
+                                <InputLabel shrink>정합 계수</InputLabel>
+                                <TextField id="outlined-basic" variant="outlined"
+                                    value={accRate} size="small" style={wdh80}
+                                    onChange={(event) => {
+                                        const inputVal = event.target.value;
+                                        var regex = /^[0-9]*\.?[0-9]*$/;
+                                        console.log('MemberPerIpt.change:', regex.test(inputVal));
+                                        if (!regex.test(inputVal)) {
+                                            alert('숫자만 입력 가능합니다');
+                                            return;
+                                        }
+                                        if (inputVal >= 100) {
+                                            alert('최대치를 초과합니다');
+                                            setAccRate(99);
+                                            return;
+                                        }
+
+                                        setAccRate(inputVal);
+                                    }}
+                                />
+                            </div>}
+                        {true && 
+                            <div className="wrapper">
+                                <InputLabel shrink>팀별 인원</InputLabel>
+                                <Select value={per} size="small"
+                                    onChange={(event) => { 
+                                        const inputVal = event.target.value
+                                        console.log('MemberPerSel.change:', inputVal)
+                                        setPer(inputVal)
+                                    }}
+                                >   {false && <MenuItem value="0"><em>0</em></MenuItem>}
+                                    {true && [...Array(members?.length)]?.map((_, idx, self) => {
+                                        return <MenuItem value={idx+1}>{idx+1}</MenuItem>
+                                    })}
+                                </Select>
+                            </div>}
+                        {true && <div className="btnArea">
+                                <Button style={hgt100pct} variant="outlined" onClick={generateCase}>새 팀 생성</Button>
+                                <Button  style={hgt100pct}variant="outlined" onClick={exportExcel}>엑셀로 저장</Button>
+                            </div>}
+                    </div>
+                    <div className="displayArea">
+                        <table id="testData" style={{border:"1px solid #dddddd", display:"none"}} >
+                            <tr>
+                                <th>이름</th>
+                                <th>CP</th>
+                            </tr>
+                            {[...Array(members?.length / 2)]?.map((_, idx, self) => 
+                                <tr>
+                                    <td>망나뇽</td>
+                                    <td>4000</td>
+                                </tr>)}
+                        </table>
+                        <table id="tableData" style={{...tableWrapStyle, border:"1px solid #dddddd"}} >
+                            {historyList && historyList.map((nthCase, cidx) => {
+                                const current = historyList.at(-1) === nthCase
+                                // console.log('current:', idx, nthCase, current)
+                                const currentGroupStyle = (current ? {color: 'lime'} : {})
+                                return (<Fragment key={cidx}>
+                                    <tr style={tableRowStyle}>
+                                        <td style={tableCellStyle}>{cidx + 1}{' 회차'}</td>
+                                        {nthCase?.map((group, gidx) => {
+                                            // console.log('nthCase:', nthCase, group)
+                                            const nthGroup = group?.split(',');
+                                            return (<Fragment key={gidx}>
+                                                <td style={{border: '1px solid lightgray', ...tableCellStyle}}>
+                                                {gidx + 1}{' 팀'}
+                                                </td>
+                                                {nthGroup.map((member, midx) => 
+                                                    <td key={midx} style={{...tableCellStyle, ...currentGroupStyle}}>
+                                                        {member}
+                                                    </td>
+                                                )}
+                                            </Fragment>)
+                                        })}
+                                    </tr>
+                                </Fragment>)
+                            })}
+                        </table>
+                        <div id="divData" style={{...tableWrapStyle, border:"1px solid #dddddd", display:"none"}} >
+                            {historyList && historyList.map((nthCase, cidx) => {
+                                const current = historyList.at(-1) === nthCase
+                                // console.log('current:', idx, nthCase, current)
+                                const currentGroupStyle = (current ? {color: 'lime'} : {})
+                                return (<Fragment key={cidx}>
+                                    <div style={tableRowStyle}>
+                                        <div style={tableCellStyle}>
+                                            {cidx + 1}{' 회차'}
+                                        </div>
+                                        {nthCase?.map((group, gidx) => {
+                                            // console.log('nthCase:', nthCase, group)
+                                            const nthGroup = group?.split(',');
+                                            return (<Fragment key={gidx}>
+                                                <div style={{border: '1px solid lightgray', ...tableCellStyle}}>
+                                                {gidx + 1}{' 팀'}
+                                                </div>
+                                                {nthGroup.map((member, midx) => 
+                                                    <div key={midx} style={{...tableCellStyle, ...currentGroupStyle}}>
+                                                        {member}
+                                                    </div>
+                                                )}
+                                            </Fragment>)
+                                        })}
+                                    </div>
+                                </Fragment>)
+                            })}
+                        </div>
+                    </div>
+                    <div className="executePanel">
+                        {false && <Button variant="outlined" onClick={generateCase}>새 팀 생성</Button>}
+                    </div>
+                </>)
+            }
+
+            const rootElement = document.getElementById("root");
+            // ReactDOM.render(<ShuffleApp />, rootElement);
+            const root = ReactDOM.createRoot(rootElement);
+            root.render(<ShuffleApp groupHistory={_groupHistory} defPer={_per} defAccRate={_accRate} />)
+
+        </script>
+    </body>
+</html>
