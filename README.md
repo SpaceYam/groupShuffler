@@ -1,4 +1,4 @@
-< https://spaceyam.github.io/groupShuffler 에서 확인하실 수 있습니다. >
+< https://spaceyam.github.io/groupShuffler?members= 에서 확인하실 수 있습니다. >
 
 
 License: [https://mit-license.org/](https://mit-license.org/)
@@ -21,7 +21,7 @@ You don't need a server
 just open the html and upload and rewrite your data
 then export your data and do it again and again
 
-look at this at https://spaceyam.github.io/groupShuffler
+look at this at https://spaceyam.github.io/groupShuffler?members=성진,영삼,소연,지현,초희,소진,정진,영미,진성
 </pre>
 
 &nbsp;
