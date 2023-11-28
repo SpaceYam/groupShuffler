@@ -24,6 +24,7 @@
         <script src="https://unpkg.com/react-dom@latest/umd/react-dom.development.js"></script>
         <script src="https://unpkg.com/@mui/material@latest/umd/material-ui.development.js" crossorigin="anonymous"></script>
         <script src="https://unpkg.com/@babel/standalone@latest/babel.min.js" crossorigin="anonymous"></script>
+        <script src='https://unpkg.com/react-router-dom@5.0.0/umd/react-router-dom.min.js'></script>
         <!-- Fonts to support Material Design -->
         <link rel="stylesheet"
             href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap"
@@ -37,6 +38,10 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
 
         <style>
+            html {
+                background-color: #1F1F1F;
+                color: #F1F3F4 !important;
+            }
             .mg15 {
                 margin: 15px 0;
             }
@@ -50,16 +55,23 @@
                 width:'80px'
             }
             .wdh100 {
-                width:'100px'
+                width:'150px'
             }
             .wrapper {
                 /* @extend .mg15; */
                 margin: 20px 0;
             }
 
+            .top-layer {
+                box-shadow: rgba(0, 0, 0, 0.16) 0px 3px 6px, rgba(0, 0, 0, 0.23) 0px 3px 6px;
+                background-color: #F1F3F4;
+                border-radius: 10px;
+                margin: 20px;
+                padding: 10px 20px;
+            }
             .controlArea {
-                height: 125px;
-                padding: 10px 0 30px 0;
+                /* height: 125px; */
+                padding: 10px 0 15px 0;
                 display: flex;
                 gap: 25px;
             }
@@ -69,9 +81,14 @@
                 gap: 3px;
             }
             .displayArea {
+                width: 100%;
+                display: flex;
+                justify-content: center;
             }
             .executePanel {
                 padding: 25px;
+            }
+            .bottom-layer {
             }
         </style>
     </head>
@@ -80,15 +97,49 @@
 
         <script type="text/babel">
 
-            const _groupHistory = [
-                ['JS,EJ,JY','SY,GB,SA'],
+            function getParamValue (param) {
+                const membersParam = window.location.search;
+                const urlParams = new URLSearchParams(membersParam);
+                const paramKey = urlParams.get(param);
+                // console.log('membersParam:', membersParam, paramKey, urlParams, window.location);
+                return paramKey;
+            }
+
+            function setMembersParam ({ value, per }, isRedirect) {
+                const perParam = getParamValue('per')
+                // console.log('setMembersParam:', isRedirect, { perParam, value, per })
+                const initParams = {
+                    members: value,
+                }
+                if (perParam) initParams['per'] = perParam;
+                if (!isNaN(per)) initParams['per'] = per;
+                const queryParams = new URLSearchParams(initParams);
+                const newRelativePathQuery = window.location.pathname + '?' + queryParams.toString();
+                if (isRedirect) location.href = newRelativePathQuery;
+                history.pushState(null, '', newRelativePathQuery);
+            }
+
+            // access-url: file:///C:/Users/John/Downloads/shuffler.html?members=JS,EJ,JY,SY,GB,SA
+            const defMembers = 'JS,EJ,JY,SY,GB,SA,P1,P2,P3,P4,P5' // ['JS','EJ','JY','SY','GB','SA', 'P1','P2','P3','P4','P5'];
+            if (!getParamValue('members')) {
+                setMembersParam({ value: defMembers })
+            }
+            const membersParam = getParamValue('members')
+            const perParam = getParamValue('per')
+            const splited = membersParam?.split(',');
+            const rmduped = Array.from(new Set(splited));
+            const _members = rmduped.join();
+            const defGroupHistory = [
+                // ['JS,EJ,JY','SY,GB,SA'],
                 // ['JS,SA,EJ','SY,JY,GB'],
             ];
-            const members = ['JS','EJ','JY','SY','GB','SA', 'P1','P2','P3','P4'];
-            const _per = 3;
-            const _accRate = 3; // 1.5;
 
-            const { useState, useEffect, useMemo, Fragment } = React;
+            const _defPer = rmduped?.length > 3 ? parseInt(rmduped.length / 2) : 2;
+            const _per = perParam || _defPer;
+            const _accRate = 3; // 1.5;
+            console.log('initMembers:', perParam, rmduped)
+
+            const { useState, useEffect, useMemo, useCallback, Fragment } = React;
             // const { Dropdown } = primereact.dropdown;
             // const { Skeleton } = primereact.skeleton;
             const { Select, MenuItem, TextField, InputLabel, Input, Button } = MaterialUI;
@@ -96,7 +147,14 @@
             const ShuffleApp = ({ // groupHistory, 
                 defPer, defAccRate 
             }) => {
+                const router = ReactRouterDOM;
+
+                const [memIpt, setMemIpt] = useState(_members);
+                const [members, setMembers] = useState(_members);
+                const memberList = useMemo(() => members?.split(','), [members]);
+
                 const [groupHistory, setGroupHistory] = useState();
+                // console.log('setPer:', defPer)
                 const [per, setPer] = useState(defPer);
                 const [accRate, setAccRate] = useState(defAccRate);
                 const shfRate = useMemo(() => 50 * (groupHistory?.length || 1) * accRate, [accRate]);
@@ -114,7 +172,10 @@
                 }, [groupHistory]);
 
                 useEffect(() => {
-                    if (exceptList) generateCase();
+                    if (exceptList) {
+                        // console.log('exceptList:', exceptList, members)
+                        generateCases({ isInit: true });
+                    }
                 }, [exceptList]);
 
                 function getAllCases(history) {
@@ -145,26 +206,41 @@
                     }
                 }
 
-                function generateCase() {
+                const onGenerateCases = useCallback((selPer) => {
+                    initData();
+                    const splited = memIpt?.split(',');
+                    const rmduped = Array.from(new Set(splited));
+                    const __members = rmduped.join();
+                    const __per = rmduped?.length > 3 ? parseInt(rmduped.length / 2) : 2;
+                    /*
+                    setMemIpt(__members)
+                    setMembers(__members);
+                    setPer(__per); */
+                    setMembersParam({ value: __members, per: selPer }, true);
+                }, [memIpt]);
+                function generateCases({ isInit = false }) {
+                    // const _memberList = members?.split(',');
                     for (let step = 0; step < shfRate * 1; step++) {
-                        const shuffler = shuffle(members);
+                        const shuffler = shuffle(memberList);
                         const setCase = [];
                         const setGroup = [];
-                        shuffler?.shuffled?.map((member, idx) => {
+                        shuffler?.shuffled?.map((member, idx, self) => {
+                            const isLastIdx = self.at(-1) === member
                             const mod = (idx + 1) % per;
-                            // console.log('setCase:', idx, per, mod)
+                            // console.log('setCase:', isLastIdx, idx, per, mod)
                             setGroup.push(member);
                             if (mod === 0) {
                                 setCase.push(setGroup?.join());
                                 setGroup.length = 0;
                             }
+                            if (isLastIdx) setCase.push(setGroup?.join());
                         })
                         const pastExcepts = [...exceptList || [], ...addedExceptList || []];
                         const newExcepts = [...getAllCases([setCase])];
-                        console.log('generateCase', // pastExcepts, newExcepts
-                        );
                         let allJoined = '';
                         const history = groupHistory || historyList || [];
+                        console.log('generateCases' // pastExcepts, newExcepts
+                        );
                         history?.map((aCase) => {
                             // console.log('allJoined:', allJoined, aCase);
                             allJoined += aCase?.join('||'); // shuffler?.shuffled?.join();
@@ -175,11 +251,16 @@
                             continue;
                         } else {
                             // console.log('setCase.res:', setCase);
-                            history.push(setCase);
-                            setHistoryList([...history]);
-                            console.log('AddExcepts:', pastExcepts, addedExceptList, // newExcepts
+                            if (isInit) {
+                                setHistoryList([...history]);
+                                setAddedExceptList([...addedExceptList || []]);
+                            } else {
+                                history.push(setCase);
+                                setHistoryList([...history]);
+                                setAddedExceptList([...addedExceptList || [], ...newExcepts]);
+                            }
+                            console.log('AddExcepts:', exceptList, addedExceptList, newExcepts
                             );
-                            setAddedExceptList([...addedExceptList || [], ...newExcepts]);
                             break;
                         }
                     }
@@ -203,7 +284,7 @@
 
                     const fileInput = document.getElementById('inputExcelRead');
                     fileInput.addEventListener('click', (e) => {
-                        console.log('click:', e)
+                        // console.log('click:', e)
                         e.target.value = null;
                         initData();
                     });
@@ -268,8 +349,10 @@
                                 }
                             }
                         })
+                        /*
                         console.log('props:', cells, // dbData, _groupHistory
                         ); // [['JS,EJ,JY','SY,GB,SA'], [...
+                        */
                         setGroupHistory([..._groupHistory]);
                     }
                 }, [dbData])
@@ -306,97 +389,123 @@
                 const parser = new DOMParser();
                 const wdh80 = {width: '80px'}
                 const wdh200 = {width: '200px'}
+                const wdh635 = {width: '635px'}
                 const hgt100pct = {height: '100%'}
                 const tableWrapStyle = {width: '88%', display: 'table', borderCollapse: 'collapse'};
                 const tableRowStyle = {display: 'table-row'};
                 const tableCellStyle = {padding: '5px', display: 'table-cell', borderBottom: '1px solid lightgray'};
                 return (<>
-                    <div className="controlArea">
-                        {true && 
-                            <div className="mg30">
-                                <Input style={wdh200} type="file" id="inputExcelRead" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>
-                            </div>}
-                        {true && 
-                            <div className="wrapper">
-                                <InputLabel shrink>정합 계수</InputLabel>
-                                <TextField id="outlined-basic" variant="outlined"
-                                    value={accRate} size="small" style={wdh80}
-                                    onChange={(event) => {
-                                        const inputVal = event.target.value;
-                                        var regex = /^[0-9]*\.?[0-9]*$/;
-                                        console.log('MemberPerIpt.change:', regex.test(inputVal));
-                                        if (!regex.test(inputVal)) {
-                                            alert('숫자만 입력 가능합니다');
-                                            return;
-                                        }
-                                        if (inputVal >= 100) {
-                                            alert('최대치를 초과합니다');
-                                            setAccRate(99);
-                                            return;
-                                        }
+                    <div className="top-layer">
+                        <div className="controlArea">
+                            {true && 
+                                <div>
+                                    <InputLabel shrink>팀원 {memberList?.length} 명</InputLabel>
+                                    <TextField id="outlined-basic" variant="outlined"
+                                        value={memIpt} style={wdh635}
+                                        onChange={(event) => {
+                                            setMemIpt(event.target.value)
+                                        }}
+                                        onBlur={onGenerateCases}
+                                    />
+                                </div>}
+                        </div>
+                        <div className="controlArea">
+                            {true && 
+                                <div // className="mg30"
+                                >
+                                    <Input style={wdh200} type="file" id="inputExcelRead" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"/>
+                                </div>}
+                            {true && 
+                                <div className="wrapper">
+                                    <InputLabel shrink>정합 계수</InputLabel>
+                                    <TextField id="outlined-basic" variant="outlined"
+                                        value={accRate} size="small" style={wdh80}
+                                        onChange={(event) => {
+                                            const inputVal = event.target.value;
+                                            var regex = /^[0-9]*\.?[0-9]*$/;
+                                            console.log('MemberPerIpt.change:', regex.test(inputVal));
+                                            if (!regex.test(inputVal)) {
+                                                alert('숫자만 입력 가능합니다');
+                                                return;
+                                            }
+                                            if (inputVal >= 100) {
+                                                alert('최대치를 초과합니다');
+                                                setAccRate(99);
+                                                return;
+                                            }
 
-                                        setAccRate(inputVal);
-                                    }}
-                                />
-                            </div>}
-                        {true && 
-                            <div className="wrapper">
-                                <InputLabel shrink>팀별 인원</InputLabel>
-                                <Select value={per} size="small"
-                                    onChange={(event) => { 
-                                        const inputVal = event.target.value
-                                        console.log('MemberPerSel.change:', inputVal)
-                                        setPer(inputVal)
-                                    }}
-                                >   {false && <MenuItem value="0"><em>0</em></MenuItem>}
-                                    {true && [...Array(members?.length)]?.map((_, idx, self) => {
-                                        return <MenuItem value={idx+1}>{idx+1}</MenuItem>
-                                    })}
-                                </Select>
-                            </div>}
-                        {true && <div className="btnArea">
-                                <Button style={hgt100pct} variant="outlined" onClick={generateCase}>새 팀 생성</Button>
-                                <Button  style={hgt100pct}variant="outlined" onClick={exportExcel}>엑셀로 저장</Button>
-                            </div>}
+                                            setAccRate(inputVal);
+                                        }}
+                                    />
+                                </div>}
+                            {true && 
+                                <div className="wrapper">
+                                    <InputLabel shrink>팀별 인원</InputLabel>
+                                    <Select value={per} size="small"
+                                        onChange={(event) => { 
+                                            const inputVal = event.target.value;
+                                            console.log('MemberPerSel.change:', inputVal);
+                                            setPer(inputVal);
+
+                                            onGenerateCases(inputVal);
+                                        }}
+                                    >
+                                        {true && [...Array(parseInt(memberList?.length / 2))]?.map((_, idx, self) => {
+                                            return <MenuItem key={idx} value={idx+2}>{idx+2}</MenuItem>
+                                        })}
+                                    </Select>
+                                    {/* false && <MenuItem value="0"><em>0</em></MenuItem> */}
+                                </div>}
+                            {true && <div className="btnArea">
+                                    <Button style={hgt100pct} variant="outlined" onClick={generateCases}>새 팀 생성</Button>
+                                    <Button  style={hgt100pct}variant="outlined" onClick={exportExcel}>엑셀로 저장</Button>
+                                </div>}
+                        </div>
                     </div>
                     <div className="displayArea">
+                        {/*
                         <table id="testData" style={{border:"1px solid #dddddd", display:"none"}} >
                             <tr>
                                 <th>이름</th>
                                 <th>CP</th>
                             </tr>
-                            {[...Array(members?.length / 2)]?.map((_, idx, self) => 
+                            {[...Array(memberList?.length / 2)]?.map((_, idx, self) => 
                                 <tr>
                                     <td>망나뇽</td>
                                     <td>4000</td>
                                 </tr>)}
-                        </table>
+                        </table> */}
                         <table id="tableData" style={{...tableWrapStyle, border:"1px solid #dddddd"}} >
-                            {historyList && historyList.map((nthCase, cidx) => {
-                                const current = historyList.at(-1) === nthCase
-                                // console.log('current:', idx, nthCase, current)
-                                const currentGroupStyle = (current ? {color: 'lime'} : {})
-                                return (<Fragment key={cidx}>
-                                    <tr style={tableRowStyle}>
-                                        <td style={tableCellStyle}>{cidx + 1}{' 회차'}</td>
-                                        {nthCase?.map((group, gidx) => {
-                                            // console.log('nthCase:', nthCase, group)
-                                            const nthGroup = group?.split(',');
-                                            return (<Fragment key={gidx}>
-                                                <td style={{border: '1px solid lightgray', ...tableCellStyle}}>
-                                                {gidx + 1}{' 팀'}
-                                                </td>
-                                                {nthGroup.map((member, midx) => 
-                                                    <td key={midx} style={{...tableCellStyle, ...currentGroupStyle}}>
-                                                        {member}
+                            <thead></thead>
+                            <tbody>
+                                {historyList && historyList.map((nthCase, cidx) => {
+                                    const current = historyList.at(-1) === nthCase
+                                    // console.log('current:', idx, nthCase, current)
+                                    const currentGroupStyle = (current ? {color: 'lime'} : {})
+                                    return (<Fragment key={cidx}>
+                                        <tr key={cidx} style={tableRowStyle}>
+                                            <td style={tableCellStyle}>{cidx + 1}{' 회차'}</td>
+                                            {nthCase?.map((group, gidx) => {
+                                                // console.log('nthCase:', nthCase, group)
+                                                const nthGroup = group?.split(',');
+                                                return (<Fragment key={gidx}>
+                                                    <td style={{border: '1px solid lightgray', ...tableCellStyle}}>
+                                                    {gidx + 1}{' 팀'}
                                                     </td>
-                                                )}
-                                            </Fragment>)
-                                        })}
-                                    </tr>
-                                </Fragment>)
-                            })}
+                                                    {nthGroup.map((member, midx) => 
+                                                        <td key={midx} style={{...tableCellStyle, ...currentGroupStyle}}>
+                                                            {member}
+                                                        </td>
+                                                    )}
+                                                </Fragment>)
+                                            })}
+                                        </tr>
+                                    </Fragment>)
+                                })}
+                            </tbody>
+                            <tfoot></tfoot>
                         </table>
+                        {/*
                         <div id="divData" style={{...tableWrapStyle, border:"1px solid #dddddd", display:"none"}} >
                             {historyList && historyList.map((nthCase, cidx) => {
                                 const current = historyList.at(-1) === nthCase
@@ -424,10 +533,10 @@
                                     </div>
                                 </Fragment>)
                             })}
-                        </div>
+                        </div> */}
                     </div>
                     <div className="executePanel">
-                        {false && <Button variant="outlined" onClick={generateCase}>새 팀 생성</Button>}
+                        {false && <Button variant="outlined" onClick={generateCases}>새 팀 생성</Button>}
                     </div>
                 </>)
             }
@@ -435,7 +544,7 @@
             const rootElement = document.getElementById("root");
             // ReactDOM.render(<ShuffleApp />, rootElement);
             const root = ReactDOM.createRoot(rootElement);
-            root.render(<ShuffleApp groupHistory={_groupHistory} defPer={_per} defAccRate={_accRate} />)
+            root.render(<ShuffleApp groupHistory={defGroupHistory} defPer={_per} defAccRate={_accRate} />)
 
         </script>
     </body>
