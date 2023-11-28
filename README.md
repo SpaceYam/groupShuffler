@@ -27,7 +27,7 @@ look at this at https://spaceyam.github.io/groupShuffler?members=성진,영삼,�
 &nbsp;
 ## Sample Image ##
 
-![]()
+![image](https://github.com/SpaceYam/groupShuffler/assets/38101772/f35f529e-e4cf-409b-828a-2f67fb680f74)
 
 
 
