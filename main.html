@@ -230,10 +230,15 @@
                             // console.log('setCase:', isLastIdx, idx, per, mod)
                             setGroup.push(member);
                             if (mod === 0) {
-                                setCase.push(setGroup?.join());
+                                const joined = setGroup?.join();
+                                setCase.push(joined);
                                 setGroup.length = 0;
                             }
-                            if (isLastIdx) setCase.push(setGroup?.join());
+                            if (isLastIdx) {
+                                const joined = setGroup?.join();
+                                console.log('joined:', joined)
+                                if (joined) setCase.push(joined);
+                            }
                         })
                         const pastExcepts = [...exceptList || [], ...addedExceptList || []];
                         const newExcepts = [...getAllCases([setCase])];
